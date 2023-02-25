@@ -1,12 +1,12 @@
 package routes
 
 import (
-	controllers "rbac-api/controllers"
+	"rbac-api/handlers"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 func Auth(app *fiber.App) {
-	app.Get("/", controllers.TestCall)
-	app.Post("/login", controllers.Login)
+	app.Get("/", handlers.TestCall)
+	app.Post("/login", handlers.Login)
 }
