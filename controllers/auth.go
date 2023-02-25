@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"fmt"
+	"rbac-api/handlers"
 	"rbac-api/utils"
 
 	"github.com/gofiber/fiber/v2"
@@ -22,22 +22,10 @@ func Login(c *fiber.Ctx) error {
 		UserName string `json:"email"`
 		Password string `json:"password"`
 	}
-
 	var creds credentials
-
 	if err := c.BodyParser(&creds); err != nil {
-		response.Success = false
-		response.Message = err.Error()
-		return c.JSON(response)
+		return utils.ErrorJSON(c, err.Error())
 	}
-
-	fmt.Println(creds.UserName)
-	fmt.Println(creds.Password)
-
-	// email := c.FormValue("email")
-	// pin := c.FormValue("pin")
-	// data := handler.Login(email, pin)
-	// fmt.Println(c.Send(c.Body()))
-
-	return c.JSON(creds)
+	data := handlers.Login(creds.UserName, creds.Password)
+	return c.JSON(data)
 }
