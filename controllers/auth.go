@@ -24,7 +24,7 @@ func Login(c *fiber.Ctx) error {
 	}
 	var creds credentials
 	if err := c.BodyParser(&creds); err != nil {
-		return utils.ErrorJSON(c, err.Error())
+		return c.JSON(utils.ErrorJSON(err.Error()))
 	}
 	data := handlers.Login(creds.UserName, creds.Password)
 	return c.JSON(data)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"rbac-api/config"
+	"time"
 
 	_ "github.com/lib/pq"
 
@@ -17,6 +18,9 @@ func ConnectDB() *xorm.Engine {
 		log.Fatal(err)
 		return nil
 	}
+	loc, _ := time.LoadLocation("Asia/Jakarta")
+	engine.TZLocation = loc
+	engine.DatabaseTZ = loc
 	engine.ShowSQL()
 	err = engine.Ping()
 	if err != nil {

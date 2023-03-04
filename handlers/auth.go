@@ -10,9 +10,7 @@ func Login(Username, Password string) utils.Respon {
 
 	user, err := models.GetByEmail(Username)
 	if err != nil {
-		Respon.Success = false
-		Respon.Message = err.Error()
-		return Respon
+		return utils.ErrorJSON(err.Error())
 	}
 
 	Respon.Success = true
