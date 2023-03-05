@@ -1,9 +1,15 @@
 package models
 
 import (
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base32"
+	"errors"
 	"rbac-api/config/db"
 	"strconv"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
@@ -31,12 +37,15 @@ type Token struct {
 
 func GetByEmail(email string) (*User, error) {
 	dbEngine := db.ConnectDB()
-	// loc, _ := time.LoadLocation("Asia/Jakarta")
 
 	query := `SELECT id, email,	first_name,	last_name, password, user_active, created_at, updated_at FROM users WHERE email = $1`
 	rows, err := dbEngine.QueryString(query, email)
 	if err != nil {
 		return nil, err
+	}
+
+	if rows == nil {
+		return nil, errors.New("invalid username/password")
 	}
 
 	var user User
@@ -53,4 +62,64 @@ func GetByEmail(email string) (*User, error) {
 	}
 
 	return &user, nil
+}
+
+func (u *User) PasswordMatches(planText string) (bool, error) {
+	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(planText))
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func GenerateToken(userID int, ttl time.Duration) (*Token, error) {
+	token := &Token{
+		UserID: userID,
+		Expiry: time.Now().Add(ttl),
+	}
+
+	randomBytes := make([]byte, 16)
+	_, err := rand.Read(randomBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	token.Token = base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(randomBytes)
+	hash := sha256.Sum256([]byte(token.Token))
+	token.TokenHash = hash[:]
+
+	return token, nil
+}
+
+func Insert(token Token, u User) error {
+	dbEngine := db.ConnectDB()
+
+	// delete any existing tokens
+	stmt := "delete from tokens where user_id =?"
+	_, err := dbEngine.Exec(stmt, token.UserID)
+	if err != nil {
+		return err
+	}
+
+	// we assign the email value, just to be safe, in case it was
+	// not done in the handler that calls this function
+	token.Email = u.Email
+
+	// insert the new token
+	stmt = `insert into tokens (user_id, email, token, token_hash, created, updated, expiry)
+		values ($1, $2, $3, $4, $5, $6, $7)`
+	_, err = dbEngine.Exec(stmt,
+		token.UserID,
+		token.Email,
+		token.Token,
+		token.TokenHash,
+		time.Now(),
+		time.Now(),
+		token.Expiry,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
